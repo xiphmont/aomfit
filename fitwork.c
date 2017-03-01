@@ -6,7 +6,7 @@
 #include <libgen.h>
 #include <sys/param.h>
 
-#define FIELDS 17
+#define FIELDS 23
 
 
 float lambda_laplacian(float std_dev){
@@ -142,20 +142,48 @@ int main(int argc, char **argv){
         continue;
       }
 
-      /* fit code */
-      int n = x[9];
-      int L = x[11];
-      float eob = x[12];
-      float stddev = sqrt((float)x[14]/(1<<9));
-      float avedev = (float)x[15]/(1<<9);
-      int q = x[3];
-      float bits = (float)(x[16]-x[13]) / (1<<9);
+      /* 0: interp
+         1: plane
+         2: qi
 
-      if(bits > 0){
-        float Hval = H_laplacian(q, stddev, q);
-        float alpha = L * Hval / bits * eob;
+         3: DC quantizer
+         4: AC quantizer
+         5: DC threshold
+         6: AC threshold
 
-        printf("%f %f %f %f\n", 1./alpha, sqrt(avedev), eob, bits);
+         7: mode0
+         8: mode1
+         9: mode2
+         10: mode3
+
+         11: blockshape
+         12: valid pixels
+         13: tx type
+         14: transform size
+         15: coded coefficients
+         16: eob fraction
+
+         17: spatial variance sum
+         18: spatial variance sum of squares
+         19: distortion sum of squares
+         20: SATD (minus DC component)
+         21: DC component
+         22: bits fraction */
+      int px_n = x[12];
+      float L = x[14];
+      float Leob = x[15];
+      float eob = x[16]<<6;
+      float stddev = sqrt( (x[18] - x[17]*x[17]/px_n)/px_n);
+      float satd = (float)x[20]/(L);
+      int q = x[4];
+      int T = x[6];
+      float bits = (x[22])/(float)(1<<9);//-eob;
+
+      if(bits > 0 && stddev>0){
+        float Hval = H_laplacian(q, stddev, T+q/2.);
+        float alpha = L * Hval / bits;
+
+        printf("%f %f %f %f %f\n", alpha, satd, stddev, Leob, bits);
       }
 
       /************/

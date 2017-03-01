@@ -5,57 +5,64 @@
 #include <libgen.h>
 #include <sys/param.h>
 
-#define FIELDS 18
+#define FIELDS 23
 
 /* dimensions: inter_p, qindex, plane, mode[4], bsize, txsize */
 
 typedef struct {
   char *name;
-  int ext0;
-  int ext1;
+  int ext;
   int pos;
   int posval;
 } argument;
 
 static argument arguments[] = {
-  { "inter", 0, 0,
+  { "inter", 0,
     0, 1},
-  { "intra", 1, 1,
+  { "intra", 0,
     0, 0},
-  { "frametype", 0, 1,
+  { "frametype", 2,
     0, -1},
-  { "Y", 3, 3,
+  { "Y", 0,
     1, 0},
-  { "U", 4, 4,
+  { "U", 0,
     1, 1},
-  { "V", 5, 5,
+  { "V", 0,
     1, 2},
-  { "plane", 3, 5,
+  { "plane", 3,
     1, -1},
-  { "qi", 7, 7,
+  { "qi", 0,
     2, -1},
-  { "mode", 8, 8,
+  { "dcq", 0,
+    3, -1},
+  { "acq", 0,
     4, -1},
-  { "modeB", 9, 9,
+  { "dcthresh", 0,
     5, -1},
-  { "modeC", 10, 10,
+  { "acthresh", 0,
     6, -1},
-  { "modeD", 11, 11,
+  { "mode", 0,
     7, -1},
-  { "blockshape", 12, 12,
+  { "modeB", 0,
     8, -1},
-  { "pixels", 13, 13,
+  { "modeC", 0,
     9, -1},
-  { "N", 13, 13,
-    9, -1},
-  { "txtype", 15, 15,
+  { "modeD", -0,
     10, -1},
-  { "txsize", 16, 16,
+  { "blockshape", 0,
     11, -1},
-  { "L", 16, 16,
-    11, -1},
-  { "eobcount", 18, 18,
+  { "pixels", 0,
     12, -1},
+  { "N", 1,
+    12, -1},
+  { "txtype", 0,
+    13, -1},
+  { "txsize", 0,
+    14, -1},
+  { "L", 1,
+    15, -1},
+  { "eobcount", 0,
+    15, -1},
   { NULL }
 };
 
@@ -64,36 +71,36 @@ static char *base = NULL;
 
 FILE *sfopen(char *mode, int posval){
   char buf[MAXPATHLEN];
-  int range = a->ext1 - a->ext0 + 1;
+  int range = a->ext;
   if (range > 1) {
     if(posval >= range){
       fprintf(stderr,"Position value out of expected range in data:\n");
-      fprintf(stderr," argument name: %s\n  possible range: 0-%d\n  "
-              "  value: %d\n",a->name, a->ext1-a->ext0, posval);
+      fprintf(stderr," argument name: %s\n  possible range: %d\n  "
+              "  value: %d\n",a->name, range, posval);
       return NULL;
     }
     if(a->posval >= 0){
       fprintf(stderr,"Invalid argument entry in list:\n");
-      fprintf(stderr," argument name: %s\n  possible range: 0-%d\n  "
-              "  value: %d\n",a->name, a->ext1-a->ext0, a->posval);
+      fprintf(stderr," argument name: %s\n  possible range: %d\n  "
+              "  value: %d\n",a->name, range, a->posval);
       return NULL;
     }
     snprintf(buf,MAXPATHLEN,"%s%s%s.m",
             base,
             *base?"-":"",
-            arguments[a->ext0+posval].name);
+             (a - range + posval)->name);
   }else{
     if(a->posval < 0){
       snprintf(buf,MAXPATHLEN,"%s%s%s%d.m",
               base,
               *base?"-":"",
-              arguments[a->ext0].name,posval);
+               (a - range)->name,posval);
     }else{
       if(a->posval == posval){
         snprintf(buf,MAXPATHLEN,"%s%s%s.m",
                 base,
                 *base?"-":"",
-                arguments[a->ext0].name);
+                 (a - range)->name);
       }
     }
   }
@@ -228,16 +235,16 @@ int main(int argc, char **argv){
         tn = tempn;
         toklength = l;
       } else {
-        unsigned long long x;
+        long long x;
         char *lptr=bufp;
         char *rptr=bufp;
         int j;
         for(j=0;j<a->pos;j++){
-          strtoull(lptr,&rptr,10);
+          strtoll(lptr,&rptr,10);
           if(lptr == rptr) break;
           lptr=rptr;
         }
-        x=strtoull(lptr,&rptr,10);
+        x=strtoll(lptr,&rptr,10);
         if(lptr == rptr) continue;
         if(posval == -1 || (int)x == posval){
           if(toklength) ret=sfwrite(tokp,toklength,x);
